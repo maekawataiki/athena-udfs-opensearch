@@ -2,7 +2,7 @@
 
 This is example Athena UDF Connector to perform full text search on OpenSearch.
 
-This repo has is extended from [ahtena-udfs](https://github.com/awslabs/aws-athena-query-federation/blob/master/athena-udfs/src/main/java/com/amazonaws/athena/connectors/udfs/AthenaUDFHandler.java) repo.
+This repo is extended from [ahtena-udfs](https://github.com/awslabs/aws-athena-query-federation/blob/master/athena-udfs/src/main/java/com/amazonaws/athena/connectors/udfs/AthenaUDFHandler.java) repo.
 
 ## Added UDFs
 
