@@ -29,6 +29,29 @@ SELECT search(
 
 This would return result [aaa, bbb, ccc, ddd, ...].
 
+2. "search_object": Search OpenSearch and get result as JSON string. This can be parsed to desired data type by Athena.
+
+Example query:
+
+```
+USING EXTERNAL FUNCTION search_object(
+	host VARCHAR,
+	region VARCHAR,
+	index VARCHAR,
+	keyword VARCHAR,
+	limit INTEGER
+) RETURNS VARCHAR LAMBDA 'customudf'
+SELECT CAST(json_extract(search_object(
+		'xxx.us-west-2.es.amazonaws.com',
+		'us-west-2',
+		'wikipedia',
+		'keyword',
+		20
+	), '$') AS ARRAY(MAP(VARCHAR, VARCHAR))) AS result_array;
+```
+
+This would return result [{exist=1, title=aaa},{exist=1, title=bbb},{exist=1, title=ccc},{exist=1, title=ddd}, ...].
+
 ### Repositories for AWS built UDFs
 
 1. https://github.com/aws-samples/aws-athena-udfs-textanalytics

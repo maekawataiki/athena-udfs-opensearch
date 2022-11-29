@@ -59,7 +59,6 @@ public class AthenaUDFHandler
 
         public IndexData()
         {
-
         }
     
         public IndexData(String title, String content)
@@ -91,7 +90,7 @@ public class AthenaUDFHandler
         @Override
         public String toString()
         {
-        return String.format("IndexData{title='%s', content='%s'}", title, content);
+        return String.format("{\"title\": \"%s\", \"exist\": \"%s\"}", title, 1);
         }
     }
 
@@ -141,6 +140,46 @@ public class AthenaUDFHandler
             List<String> result = new ArrayList<>();
             searchResponse.hits().hits().stream().forEach(hit -> result.add(hit.source().getTitle()));
             return result;
+        }
+        catch (Exception e) {
+            throw new RuntimeException("Failed to query OpenSearch", e);
+        }
+        finally {
+            httpClient.close();
+        }
+    }
+
+    /**
+     * Search OpenSearch
+     * 
+     * @param host    domain of OpenSearch
+     * @param region  region of OpenSearch
+     * @param index   index of OpenSearch
+     * @param keyword keyword for search
+     * @param limit   number of search results
+     * @return List of Object
+     */
+    public String search_object(String host, String region, String index, String keyword, Integer limit)
+    {
+        SdkHttpClient httpClient = ApacheHttpClient.builder().build();
+        try {
+            OpenSearchClient client = new OpenSearchClient(
+                    new AwsSdk2Transport(
+                            httpClient,
+                            host,
+                            Region.of(region),
+                            AwsSdk2TransportOptions.builder().build()));
+
+            SearchResponse<IndexData> searchResponse = client.search(s -> s
+                .index(index)
+                .query(q -> q
+                    .multiMatch(mm -> mm.fields("title^2", "content").query(keyword))
+                ), 
+                IndexData.class);
+            List<String> result = new ArrayList<>();
+            searchResponse.hits().hits().stream().forEach(hit -> result.add(hit.source().toString()));
+            String response = "[" + String.join(",", result) + "]";
+            return response;
         }
         catch (Exception e) {
             throw new RuntimeException("Failed to query OpenSearch", e);
