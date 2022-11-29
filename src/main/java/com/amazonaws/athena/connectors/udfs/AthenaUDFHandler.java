@@ -157,7 +157,7 @@ public class AthenaUDFHandler
      * @param index   index of OpenSearch
      * @param keyword keyword for search
      * @param limit   number of search results
-     * @return List of Object
+     * @return JSON String
      */
     public String search_object(String host, String region, String index, String keyword, Integer limit)
     {
