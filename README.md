@@ -21,7 +21,7 @@ USING EXTERNAL FUNCTION search(
 SELECT search(
 		'xxx.us-west-2.es.amazonaws.com',
 		'us-west-2',
-		'wikipedia',
+		'index_name',
 		'keyword',
 		20
 	);
@@ -41,16 +41,57 @@ USING EXTERNAL FUNCTION search_object(
 	keyword VARCHAR,
 	limit INTEGER
 ) RETURNS VARCHAR LAMBDA 'customudf'
-SELECT CAST(json_extract(search_object(
+WITH dataset AS (
+    SELECT CAST(json_extract(search_object(
 		'xxx.us-west-2.es.amazonaws.com',
 		'us-west-2',
-		'wikipedia',
+		'index_name',
 		'keyword',
 		20
-	), '$') AS ARRAY(MAP(VARCHAR, VARCHAR))) AS result_array;
+	), '$') AS ARRAY(MAP(VARCHAR, VARCHAR))) AS contents
+)
+SELECT content['title'] AS title, content['exist'] AS exist FROM dataset
+CROSS JOIN UNNEST(contents) AS t(content)
 ```
 
-This would return result [{exist=1, title=aaa},{exist=1, title=bbb},{exist=1, title=ccc},{exist=1, title=ddd}, ...].
+This would return result
+
+| title | exists  |
+| ----- | ------- |
+| aaa   |   1     |
+| bbb   |   0     |
+
+3. "lucene_search": Search OpenSearch with custom lucene query and get result as JSON string. This can be parsed to desired data type by Athena.
+
+```
+USING EXTERNAL FUNCTION lucene_search(
+	host VARCHAR,
+	region VARCHAR,
+	index VARCHAR,
+	query VARCHAR,
+	fields ARRAY<VARCHAR>,
+	limit INTEGER
+) RETURNS VARCHAR LAMBDA 'customudf'
+WITH dataset AS (
+    SELECT CAST(json_extract(lucene_search(
+		'xxx.us-west-2.es.amazonaws.com',
+		'us-west-2',
+		'index_name',
+		'title:keyword',
+		ARRAY ['title'],
+		20
+	), '$') AS ARRAY(MAP(VARCHAR, VARCHAR))) AS contents
+)
+SELECT content['title'] AS title FROM dataset
+CROSS JOIN UNNEST(contents) AS t(content)
+```
+
+This would return result
+
+| title |
+| ----- |
+| aaa   |
+| bbb   |
 
 ### Repositories for AWS built UDFs
 

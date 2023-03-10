@@ -22,6 +22,8 @@ package com.amazonaws.athena.connectors.udfs;
 import com.amazonaws.athena.connector.lambda.handlers.UserDefinedFunctionHandler;
 import com.amazonaws.athena.connector.lambda.security.CachableSecretsManager;
 import com.amazonaws.services.secretsmanager.AWSSecretsManagerClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch.core.SearchResponse;
@@ -111,7 +113,7 @@ public class AthenaUDFHandler
     }
 
     /**
-     * Search OpenSearch
+     * Search OpenSearch with predefined data type and get result in list of string.
      * 
      * @param host    domain of OpenSearch
      * @param region  region of OpenSearch
@@ -150,7 +152,7 @@ public class AthenaUDFHandler
     }
 
     /**
-     * Search OpenSearch
+     * Search OpenSearch with predefined data type and get result in JSON string
      * 
      * @param host    domain of OpenSearch
      * @param region  region of OpenSearch
@@ -178,6 +180,48 @@ public class AthenaUDFHandler
                 IndexData.class);
             List<String> result = new ArrayList<>();
             searchResponse.hits().hits().stream().forEach(hit -> result.add(hit.source().toString()));
+            String response = "[" + String.join(",", result) + "]";
+            return response;
+        }
+        catch (Exception e) {
+            throw new RuntimeException("Failed to query OpenSearch", e);
+        }
+        finally {
+            httpClient.close();
+        }
+    }
+
+    /**
+     * Query with lucene
+     * 
+     * @param host   domain of OpenSearch
+     * @param region region of OpenSearch
+     * @param index  index of OpenSearch
+     * @param query  keyword for search
+     * @param limit  number of search results
+     * @return JSON String
+     */
+    public String lucene_search(String host, String region, String index, String query, List<String> fields, Integer limit)
+    {
+        SdkHttpClient httpClient = ApacheHttpClient.builder().build();
+        try {
+            OpenSearchClient client = new OpenSearchClient(
+                    new AwsSdk2Transport(
+                            httpClient,
+                            host,
+                            Region.of(region),
+                            AwsSdk2TransportOptions.builder().build()));
+
+            SearchResponse<ObjectNode> searchResponse = client.search(s -> s
+                    .index(index)
+                    .q(query)
+                    .source(source -> source.filter(f -> f.includes(fields))),
+                    ObjectNode.class);
+            List<String> result = new ArrayList<>();
+            ObjectMapper mapper = new ObjectMapper();
+            for (int i = 0; i < searchResponse.hits().hits().size(); i++) {
+                result.add(mapper.writeValueAsString(searchResponse.hits().hits().get(i).source()));
+            }
             String response = "[" + String.join(",", result) + "]";
             return response;
         }
